@@ -1,0 +1,129 @@
+          return;
+        }
+
+        const fastestBefore = getFastestRecord();
+        const now = new Date();
+        const nowSeconds = currentTokyoSeconds(now);
+        const startSeconds = secondsFromHHMM(settings.startTime);
+        const elapsedSeconds = Math.max(0, nowSeconds - startSeconds);
+        const record = {
+          date: today,
+          time: getTokyoHHMM(now),
+          elapsedSeconds,
+          elapsedText: formatDuration(elapsedSeconds),
+          timestamp: Date.now()
+        };
+
+        records.unshift(record);
+        saveRecordsToStorage();
+        renderAll();
+        setMessage("今日のいただきますを記録しました。");
+
+        if (!fastestBefore || record.elapsedSeconds < fastestBefore.elapsedSeconds) {
+          showNewRecord();
+        }
+      }
+
+      function showNewRecord() {
+        elements.newRecordBanner.classList.add("show");
+        createConfetti();
+        window.clearTimeout(newRecordTimer);
+        newRecordTimer = window.setTimeout(() => {
+          elements.newRecordBanner.classList.remove("show");
+        }, 7000);
+      }
+
+      function createConfetti() {
+        elements.confetti.innerHTML = "";
+        const colors = ["#ffd65a", "#f28c28", "#3f9b68", "#d94b36", "#ffffff"];
+        for (let i = 0; i < 34; i += 1) {
+          const piece = document.createElement("span");
+          piece.style.left = `${Math.random() * 100}%`;
+          piece.style.background = colors[i % colors.length];
+          piece.style.animationDelay = `${Math.random() * 500}ms`;
+          piece.style.animationDuration = `${1400 + Math.random() * 900}ms`;
+          piece.style.transform = `rotate(${Math.random() * 180}deg)`;
+          elements.confetti.appendChild(piece);
+        }
+        window.setTimeout(() => {
+          elements.confetti.innerHTML = "";
+        }, 2800);
+      }
+
+      function openSettings() {
+        elements.settingsPanel.classList.add("open");
+        elements.settingsPanel.setAttribute("aria-hidden", "false");
+        elements.startInput.focus();
+      }
+
+      function closeSettings() {
+        elements.settingsPanel.classList.remove("open");
+        elements.settingsPanel.setAttribute("aria-hidden", "true");
+        elements.settingsOpen.focus();
+      }
+
+      function saveSettings() {
+        const next = {
+          startTime: elements.startInput.value,
+          endTime: elements.endInput.value,
+          specialTime: elements.specialTimeInput.value,
+          specialText: elements.specialTextInput.value.trim() || DEFAULT_SETTINGS.specialText
+        };
+
+        if (!isHHMM(next.startTime) || !isHHMM(next.endTime) || !isHHMM(next.specialTime)) {
+          alert("時刻はHH:MM形式で入力してください。");
+          return;
+        }
+
+        if (timeToMinutes(next.endTime) <= timeToMinutes(next.startTime)) {
+          alert("終了時刻は開始時刻より後にしてください。");
+          return;
+        }
+
+        settings = next;
+        saveSettingsToStorage();
+        renderAll();
+        setMessage("設定を保存しました。");
+        elements.storageStatus.textContent = "設定を保存しました。";
+      }
+
+      function resetTodayRecord() {
+        if (!confirm("今日の記録だけをリセットしますか？")) return;
+        const today = getTokyoDateKey();
+        const before = records.length;
+        records = records.filter((record) => record.date !== today);
+        if (records.length !== before) {
+          saveRecordsToStorage();
+          renderAll();
+          setMessage("今日の記録をリセットしました。");
+        } else {
+          setMessage("今日の記録はありません。");
+        }
+      }
+
+      function deleteAllRecords() {
+        if (!confirm("すべての記録を削除します。この操作は元に戻せません。よろしいですか？")) return;
+        records = [];
+        saveRecordsToStorage();
+        renderAll();
+        setMessage("すべての記録を削除しました。");
+      }
+
+      elements.recordButton.addEventListener("click", recordItadakimasu);
+      elements.settingsOpen.addEventListener("click", openSettings);
+      elements.settingsClose.addEventListener("click", closeSettings);
+      elements.saveSettings.addEventListener("click", saveSettings);
+      elements.resetToday.addEventListener("click", resetTodayRecord);
+      elements.deleteAll.addEventListener("click", deleteAllRecords);
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && elements.settingsPanel.classList.contains("open")) {
+          closeSettings();
+        }
+      });
+
+      renderAll();
+      window.setInterval(updateClock, 1000);
+    })();
+  </script>
+</body>
+</html>
